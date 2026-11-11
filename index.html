@@ -1,0 +1,226 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#35106b">
+<title>Ashaan Bazaar Hub</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f6f4fb;color:#25143c}
+header{background:linear-gradient(135deg,#35106b,#7140ad);color:white;text-align:center;padding:28px 15px}
+header h1{font-size:27px;margin:0}
+header p{margin:9px 0 0}
+main{max-width:950px;margin:auto;padding:18px}
+.notice{background:#eee5fb;padding:12px;border-radius:10px;font-size:14px}
+.search{width:100%;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px}
+h2{margin-top:26px;font-size:21px}
+.categories{display:flex;gap:8px;flex-wrap:wrap}
+button{cursor:pointer}
+.categories button,.primary{border:0;border-radius:9px;padding:11px 15px;background:#65339b;color:white}
+.categories button:focus,.categories button:hover{background:#35106b}
+.products{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:13px;margin-top:15px}
+.card{background:white;padding:14px;border-radius:13px;box-shadow:0 2px 9px #ddd;overflow-wrap:anywhere}
+.pic{font-size:38px;text-align:center;background:#f0e6fa;padding:18px;border-radius:10px}
+.card h3{margin:12px 0 6px}
+.price{color:#55228a;font-weight:bold}
+.card p{font-size:14px;line-height:1.5}
+.small{color:#666;font-size:12px}
+.contact{display:inline-block;margin-top:10px;background:#16834a;color:white;text-decoration:none;padding:9px 12px;border-radius:8px;font-size:13px}
+form{background:white;padding:17px;border-radius:13px;margin-top:18px}
+form input,form textarea,form select{display:block;width:100%;padding:12px;margin:11px 0;border:1px solid #ccc;border-radius:8px;font-size:15px;background:white}
+.primary{font-size:15px}
+#message{line-height:1.5}
+footer{text-align:center;padding:25px;color:#666}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+<script>
+  Pi.init({ version: "2.0", sandbox: true });
+</script>
+<script>
+const SUPABASE_URL = "https://llwceliprulowghxvmsf.supabase.co";
+const SUPABASE_KEY = "sb_publishable_ltaNA7nnVozoSCOcZIjg";
+const supabaseClient = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+</script>
+</head>
+<body>
+<header>
+<h1>Ashaan Bazaar Hub</h1>
+<p>Buy • Sell • Discover</p>
+</header>
+
+<main>
+<p class="notice">Welcome to Ashaan Bazaar Hub! Discover products and connect with sellers.</p>
+
+<input id="search" class="search" placeholder="Search products..." oninput="render()">
+
+<h2>Browse Categories</h2>
+<div class="categories">
+<button onclick="setCategory('All')">All</button>
+<button onclick="setCategory('Electronics')">Electronics</button>
+<button onclick="setCategory('Clothing')">Clothing</button>
+<button onclick="setCategory('Home')">Home</button>
+<button onclick="setCategory('Other')">Other</button>
+</div>
+
+<h2>Marketplace Products</h2>
+<div id="products" class="products"></div>
+
+<h2>Sell a Product</h2>
+<p class="small">Enter accurate product details and a contact number.</p>
+
+<form id="productForm">
+<input id="name" placeholder="Product name" maxlength="80" required>
+<input id="price" placeholder="Price (e.g. Rs. 500 or 10 Pi)" maxlength="40" required>
+<select id="cat">
+<option>Electronics</option>
+<option>Clothing</option>
+<option>Home</option>
+<option>Other</option>
+</select>
+<textarea id="desc" placeholder="Product description" maxlength="500" required></textarea>
+<input id="phone" type="tel" placeholder="WhatsApp number with country code (e.g. 923001234567)" maxlength="20" required>
+<button class="primary" type="submit">Add Product</button>
+</form>
+<p id="message" role="status"></p>
+</main>
+
+<footer>
+Ashaan Bazaar Hub • Buy • Sell • Discover
+</footer>
+
+<script>
+let category = 'All';
+const starterItems = [
+{name:'Mobile Phone',price:'Price negotiable',cat:'Electronics',desc:'Example listing — replace with a real product.',phone:'',emoji:'📱'},
+{name:'Clothing',price:'Price negotiable',cat:'Clothing',desc:'Example listing — replace with a real product.',phone:'',emoji:'👕'},
+{name:'Home Item',price:'Price negotiable',cat:'Home',desc:'Example listing — replace with a real product.',phone:'',emoji:'🏠'}
+];
+
+function loadItems(){
+ try {
+  const saved = localStorage.getItem('ashaanBazaarProducts');
+  return saved ? JSON.parse(saved) : starterItems.slice();
+ } catch(e) {
+  return starterItems.slice();
+ }
+}
+
+let items = loadItems();
+
+function escapeText(s){
+ return String(s).replace(/[&<>"']/g,c=>({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+ }[c]));
+}
+
+function setCategory(value){
+ category = value;
+ render();
+}
+
+function render(){
+ const q = document.getElementById('search').value.toLowerCase().trim();
+ const shown = items.filter(x =>
+  (category === 'All' || x.cat === category) &&
+  (x.name+' '+x.desc+' '+x.cat).toLowerCase().includes(q)
+ );
+
+ document.getElementById('products').innerHTML =
+ shown.map(x=>{
+  const phone = String(x.phone || '').replace(/\D/g,'');
+  const contact = phone.length >= 10
+   ? `<a class="contact" href="https://wa.me/${phone}" target="_blank" rel="noopener">Contact Seller</a>`
+   : '';
+  return `<article class="card">
+   <div class="pic">${escapeText(x.emoji || '🛍️')}</div>
+   <h3>${escapeText(x.name)}</h3>
+   <div class="price">${escapeText(x.price)}</div>
+   <p>${escapeText(x.desc)}</p>
+   <span class="small">${escapeText(x.cat)}</span><br>
+   ${contact}
+  </article>`;
+ }).join('') || '<p>No products found. Try another search.</p>';
+}
+
+document.getElementById('productForm').addEventListener('submit',function(e){
+ e.preventDefault();
+
+ const product = {
+  name:document.getElementById('name').value.trim(),
+  price:document.getElementById('price').value.trim(),
+  cat:document.getElementById('cat').value,
+  desc:document.getElementById('desc').value.trim(),
+  phone:document.getElementById('phone').value.trim(),
+  emoji:'🛍️'
+ };
+
+ if(!product.name || !product.price || !product.desc || !product.phone){
+  document.getElementById('message').textContent='Please complete all fields.';
+  return;
+ }
+
+ items.unshift(product);
+
+ try {
+  localStorage.setItem('ashaanBazaarProducts',JSON.stringify(items));
+  document.getElementById('message').textContent='Product saved in this browser. It is not yet shared with other users.';
+ } catch(err) {
+  items.shift();
+  document.getElementById('message').textContent='Could not save. Browser storage may be unavailable.';
+  return;
+ }
+
+ this.reset();
+ category='All';
+ document.getElementById('search').value='';
+ render();
+});
+
+render();
+  async function loadProductsFromSupabase() {
+  const { data, error } = await supabaseClient
+    .from('products')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Supabase error:', error);
+    return;
+  }
+
+  if (data) {
+    items = data.map(p => ({
+      name: p.name,
+      price: p.price || 'Price negotiable',
+      cat: p.category || 'Other',
+      desc: p.description || '',
+      phone: p.phone || '',
+      emoji: '🛍️'
+    }));
+
+    render();
+  }
+}
+
+loadProductsFromSupabase();
+</script>
+<button id="pi-login">Login with Pi</button>
+
+<script>
+document.getElementById("pi-login").onclick = function () {
+  Pi.authenticate(
+    ["username", "payments"],
+    function (auth) {
+      alert("Welcome " + auth.user.username);
+    }
+  );
+};
+</script>
+</body>
+</html>
